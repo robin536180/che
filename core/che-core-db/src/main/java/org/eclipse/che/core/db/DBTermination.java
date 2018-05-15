@@ -30,8 +30,9 @@ import org.slf4j.LoggerFactory;
 public class DBTermination {
 
   private static final Logger LOG = LoggerFactory.getLogger(DBTermination.class);
-  private PersistService persistService;
-  private EntityManagerFactory emFactory;
+
+  private final PersistService persistService;
+  private final EntityManagerFactory emFactory;
 
   @Inject
   public DBTermination(PersistService persistService, EntityManagerFactory emFactory) {
@@ -39,7 +40,7 @@ public class DBTermination {
     this.emFactory = emFactory;
   }
 
-  /** Stops {@link PersistService}. Any DB operations is impossible after that. */
+  /** Stops {@link PersistService}. Any DB operations are impossible after that. */
   public void terminate() {
     try {
       LOG.info("Stopping persistence service.");
@@ -56,7 +57,7 @@ public class DBTermination {
    * the system.<br>
    * For more details see {@link JGroupsRemoteConnection#closeInternal()}
    *
-   * <p>TODO eclipse-link extension issue https://bugs.eclipse.org/bugs/show_bug.cgi?id=534148
+   * <p>The corresponding eclipse-link extension issue https://bugs.eclipse.org/bugs/show_bug.cgi?id=534148
    */
   private void fixJChannelClosing(EntityManagerFactory emFactory) {
     try {
