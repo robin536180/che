@@ -94,6 +94,7 @@ import org.eclipse.che.api.project.server.ProjectManager;
 import org.eclipse.che.api.project.server.notification.ProjectUpdatedEvent;
 import org.eclipse.che.jdt.ls.extension.api.Commands;
 import org.eclipse.che.jdt.ls.extension.api.Severity;
+import org.eclipse.che.jdt.ls.extension.api.dto.CheResourceChange;
 import org.eclipse.che.jdt.ls.extension.api.dto.CheWorkspaceEdit;
 import org.eclipse.che.jdt.ls.extension.api.dto.ClasspathEntry;
 import org.eclipse.che.jdt.ls.extension.api.dto.ExtendedSymbolInformation;
@@ -124,7 +125,6 @@ import org.eclipse.che.plugin.java.languageserver.dto.DtoServerImpls.Implementer
 import org.eclipse.che.plugin.java.languageserver.dto.DtoServerImpls.TestPositionDto;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.ResourceChange;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.TextDocumentPositionParams;
 import org.eclipse.lsp4j.TextEdit;
@@ -647,15 +647,15 @@ public class JavaLanguageServerExtensionService {
 
     CheWorkspaceEdit cheWorkspaceEdit =
         doGetOne(RENAME_COMMAND, singletonList(renameSettings), type);
-    List<ResourceChange> resourceChanges = getResourceChanges(cheWorkspaceEdit);
-    cheWorkspaceEdit.setResourceChanges(resourceChanges);
+    List<CheResourceChange> resourceChanges = getResourceChanges(cheWorkspaceEdit);
+    cheWorkspaceEdit.setCheResourceChanges(resourceChanges);
     cheWorkspaceEdit.setChanges(getTextChanges(cheWorkspaceEdit));
     return cheWorkspaceEdit;
   }
 
-  private List<ResourceChange> getResourceChanges(CheWorkspaceEdit cheWorkspaceEdit) {
+  private List<CheResourceChange> getResourceChanges(CheWorkspaceEdit cheWorkspaceEdit) {
     return cheWorkspaceEdit
-        .getResourceChanges()
+        .getCheResourceChanges()
         .stream()
         .peek(
             each -> {

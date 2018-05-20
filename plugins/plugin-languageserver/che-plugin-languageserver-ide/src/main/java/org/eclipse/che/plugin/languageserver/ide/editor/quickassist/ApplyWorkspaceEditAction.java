@@ -27,10 +27,7 @@ import javax.inject.Singleton;
 import org.eclipse.che.api.languageserver.shared.dto.DtoClientImpls.FileEditParamsDto;
 import org.eclipse.che.api.languageserver.shared.model.FileEditParams;
 import org.eclipse.che.api.languageserver.shared.util.RangeComparator;
-import org.eclipse.che.api.promises.client.Function;
-import org.eclipse.che.api.promises.client.Promise;
-import org.eclipse.che.api.promises.client.PromiseError;
-import org.eclipse.che.api.promises.client.PromiseProvider;
+import org.eclipse.che.api.promises.client.*;
 import org.eclipse.che.api.promises.client.js.Executor;
 import org.eclipse.che.api.promises.client.js.RejectFunction;
 import org.eclipse.che.api.promises.client.js.ResolveFunction;
@@ -55,6 +52,9 @@ import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.project.ProjectServiceClient;
 import org.eclipse.che.ide.resource.Path;
 import org.eclipse.che.ide.util.loging.Log;
+import org.eclipse.che.jdt.ls.extension.api.ResourceKind;
+import org.eclipse.che.jdt.ls.extension.api.dto.CheResourceChange;
+import org.eclipse.che.jdt.ls.extension.api.dto.CheWorkspaceEdit;
 import org.eclipse.che.plugin.languageserver.ide.LanguageServerLocalization;
 import org.eclipse.che.plugin.languageserver.ide.service.TextDocumentServiceClient;
 import org.eclipse.che.plugin.languageserver.ide.service.WorkspaceServiceClient;
@@ -63,12 +63,10 @@ import org.eclipse.che.plugin.languageserver.ide.util.PromiseHelper;
 import org.eclipse.lsp4j.DidCloseTextDocumentParams;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.ResourceChange;
 import org.eclipse.lsp4j.TextDocumentEdit;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.WorkspaceEdit;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 @Singleton
 public class ApplyWorkspaceEditAction extends BaseAction {
@@ -157,15 +155,22 @@ public class ApplyWorkspaceEditAction extends BaseAction {
             undos::add);
 
     done.then(
-            (Void v) ->
-                applyResourceChanges(notification, edit)
+            v -> {
+              if (edit instanceof CheWorkspaceEdit) {
+                applyResourceChanges(notification, (CheWorkspaceEdit) edit)
                     .then(
-                        arg -> {
+                        ignored -> {
                           Log.debug(getClass(), "done applying changes");
                           notification.setStatus(Status.SUCCESS);
                           notification.setContent(
                               localization.applyWorkspaceActionNotificationDone());
-                        }))
+                        });
+              } else {
+                Log.debug(getClass(), "done applying changes");
+                notification.setStatus(Status.SUCCESS);
+                notification.setContent(localization.applyWorkspaceActionNotificationDone());
+              }
+            })
         .catchError(
             (error) -> {
               Log.info(getClass(), "caught error applying changes", error);
@@ -187,20 +192,15 @@ public class ApplyWorkspaceEditAction extends BaseAction {
             });
   }
 
-  private Promise<Void> applyResourceChanges(Notification notification, WorkspaceEdit edit) {
-    List<Either<ResourceChange, TextDocumentEdit>> resourceChanges = edit.getResourceChanges();
+  private Promise<Void> applyResourceChanges(Notification notification, CheWorkspaceEdit edit) {
+    List<CheResourceChange> resourceChanges = edit.getCheResourceChanges();
     if (resourceChanges.isEmpty()) {
       return promises.resolve(null);
     }
 
     ArrayOf<Promise<?>> changesPromises = elemental.util.Collections.arrayOf();
 
-    for (Either<ResourceChange, TextDocumentEdit> rChange : resourceChanges) {
-      if (rChange.isRight()) {
-        continue;
-      }
-
-      ResourceChange change = rChange.getLeft();
+    for (CheResourceChange change : resourceChanges) {
       if (change == null) {
         continue;
       }
@@ -209,7 +209,7 @@ public class ApplyWorkspaceEditAction extends BaseAction {
 
       Path path = Path.valueOf(newUri).makeAbsolute();
       if (isNullOrEmpty(current)) {
-        createResource(path, notification);
+        createResource(path, change.getResourceKind(), notification);
         continue;
       }
       Path oldPath = Path.valueOf(current).makeAbsolute();
@@ -219,12 +219,12 @@ public class ApplyWorkspaceEditAction extends BaseAction {
           workspaceRoot
               .getResource(oldPath)
               .then(
-                  arg -> {
-                    if (!arg.isPresent()) {
+                  resourceOptional -> {
+                    if (!resourceOptional.isPresent()) {
                       return;
                     }
 
-                    Resource resource = arg.get();
+                    Resource resource = resourceOptional.get();
 
                     editorAgent.saveAll(
                         new AsyncCallback<Void>() {
@@ -257,25 +257,25 @@ public class ApplyWorkspaceEditAction extends BaseAction {
     return promises.all2(changesPromises).thenPromise(ignored -> promises.resolve(null));
   }
 
-  private void createResource(Path path, Notification notification) {
+  private void createResource(Path path, ResourceKind kind, Notification notification) {
     Container workspaceRoot = appContext.getWorkspaceRoot();
     workspaceRoot
         .getResource(path)
         .then(
             resource -> {
-              if (isNullOrEmpty(path.getFileExtension())) {
+              if (ResourceKind.FOLDER.equals(kind)) {
                 projectService
                     .createFolder(path)
                     .catchError(
-                        arg -> {
-                          notification.setContent(arg.getMessage());
+                        error -> {
+                          notification.setContent(error.getMessage());
                         });
-              } else {
+              } else if (ResourceKind.FILE.equals(kind)) {
                 projectService
                     .createFile(path, "")
                     .catchError(
-                        arg -> {
-                          notification.setContent(arg.getMessage());
+                        error -> {
+                          notification.setContent(error.getMessage());
                         });
               }
             });

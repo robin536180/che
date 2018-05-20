@@ -15,7 +15,6 @@ import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAI
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.util.LinkedList;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.ide.api.editor.EditorAgent;
 import org.eclipse.che.ide.api.editor.EditorPartPresenter;
@@ -41,10 +40,7 @@ import org.eclipse.che.jdt.ls.extension.api.dto.RenamingElementInfo;
 import org.eclipse.che.plugin.languageserver.ide.editor.quickassist.ApplyWorkspaceEditAction;
 import org.eclipse.che.plugin.languageserver.ide.util.DtoBuildHelper;
 import org.eclipse.lsp4j.RenameParams;
-import org.eclipse.lsp4j.ResourceChange;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
-import org.eclipse.lsp4j.WorkspaceEdit;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 /**
  * The class that manages Rename panel widget.
@@ -332,13 +328,7 @@ public class RenamePresenter implements ActionDelegate, RefactoringActionDelegat
 
   private void applyRefactoring(CheWorkspaceEdit workspaceEdit) {
     view.close();
-    WorkspaceEdit edit = new WorkspaceEdit();
-    edit.setChanges(workspaceEdit.getChanges());
-    edit.setResourceChanges(new LinkedList<>());
-    for (ResourceChange resourceChange : workspaceEdit.getResourceChanges()) {
-      edit.getResourceChanges().add(Either.forLeft(resourceChange));
-    }
-    applyWorkspaceEditAction.applyWorkspaceEdit(edit);
+    applyWorkspaceEditAction.applyWorkspaceEdit(workspaceEdit);
     setEditorFocus();
   }
 

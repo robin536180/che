@@ -18,7 +18,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import org.eclipse.che.ide.api.editor.EditorWithAutoSave;
 import org.eclipse.che.ide.api.editor.document.Document;
@@ -51,11 +50,8 @@ import org.eclipse.che.plugin.languageserver.ide.util.DtoBuildHelper;
 import org.eclipse.lsp4j.DidCloseTextDocumentParams;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.RenameParams;
-import org.eclipse.lsp4j.ResourceChange;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextDocumentPositionParams;
-import org.eclipse.lsp4j.WorkspaceEdit;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 /**
  * Class for rename refactoring java classes
@@ -313,14 +309,8 @@ public class JavaRefactoringRename implements FileEventHandler {
         .then(
             edits -> {
               enableAutoSave();
-              WorkspaceEdit edit = new WorkspaceEdit();
-              edit.setChanges(edits.getChanges());
-              edit.setResourceChanges(new LinkedList<>());
-              for (ResourceChange resourceChange : edits.getResourceChanges()) {
-                edit.getResourceChanges().add(Either.forLeft(resourceChange));
-              }
               undoChanges();
-              applyWorkspaceEditAction.applyWorkspaceEdit(edit);
+              applyWorkspaceEditAction.applyWorkspaceEdit(edits);
               clientServerEventService.sendFileTrackingResumeEvent();
               sendOpenEvent();
             })

@@ -320,6 +320,10 @@
                     <dtoPackages>
                         <dtoPackage>org.eclipse.che.jdt.ls.extension.api.dto</dtoPackage>
                     </dtoPackages>
+                    <classes>
+                        <class>org.eclipse.che.jdt.ls.extension.api.dto.CheResourceChange</class>
+                        <class>org.eclipse.che.jdt.ls.extension.api.dto.CheWorkspaceEdit</class>
+                    </classes>
                     <excludes>
                         <exclude>org.eclipse.che.jdt.ls.extension.api.dto.LinearRange</exclude>
                     </excludes>

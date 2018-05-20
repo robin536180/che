@@ -18,7 +18,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.che.api.promises.client.Promise;
@@ -30,11 +29,11 @@ import org.eclipse.che.ide.ext.java.client.refactoring.RefactorInfo;
 import org.eclipse.che.ide.ext.java.client.refactoring.RefactoringActionDelegate;
 import org.eclipse.che.ide.ext.java.shared.dto.refactoring.ChangePreview;
 import org.eclipse.che.ide.resource.Path;
+import org.eclipse.che.jdt.ls.extension.api.dto.CheResourceChange;
 import org.eclipse.che.jdt.ls.extension.api.dto.CheWorkspaceEdit;
 import org.eclipse.che.plugin.languageserver.ide.editor.quickassist.ApplyWorkspaceEditAction;
 import org.eclipse.lsp4j.ResourceChange;
 import org.eclipse.lsp4j.TextEdit;
-import org.eclipse.lsp4j.WorkspaceEdit;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 
 /**
@@ -92,14 +91,7 @@ public class PreviewPresenter implements PreviewView.ActionDelegate {
   public void onAcceptButtonClicked() {
     updateFinalEdits();
 
-    WorkspaceEdit edit = new WorkspaceEdit();
-    edit.setChanges(workspaceEdit.getChanges());
-    edit.setResourceChanges(new LinkedList<>());
-    for (ResourceChange resourceChange : workspaceEdit.getResourceChanges()) {
-      edit.getResourceChanges().add(Either.forLeft(resourceChange));
-    }
-
-    applyWorkspaceEditAction.applyWorkspaceEdit(edit);
+    applyWorkspaceEditAction.applyWorkspaceEdit(workspaceEdit);
     view.close();
     refactoringActionDelegate.closeWizard();
   }
@@ -214,10 +206,10 @@ public class PreviewPresenter implements PreviewView.ActionDelegate {
   private void prepareNodes(CheWorkspaceEdit workspaceEdit) {
     fileNodes.clear();
     prepareTextEditNodes(workspaceEdit.getChanges());
-    prepareResourceChangeNodes(workspaceEdit.getResourceChanges());
+    prepareResourceChangeNodes(workspaceEdit.getCheResourceChanges());
   }
 
-  private void prepareResourceChangeNodes(List<ResourceChange> resourceChanges) {
+  private void prepareResourceChangeNodes(List<CheResourceChange> resourceChanges) {
     for (ResourceChange resourceChange : resourceChanges) {
       PreviewNode node = new PreviewNode();
       node.setData(Either.forLeft(resourceChange));
@@ -283,13 +275,13 @@ public class PreviewPresenter implements PreviewView.ActionDelegate {
           continue;
         }
         ResourceChange left = data.getLeft();
-        List<ResourceChange> selectedResourceChanges =
+        List<CheResourceChange> selectedResourceChanges =
             workspaceEdit
-                .getResourceChanges()
+                .getCheResourceChanges()
                 .stream()
                 .filter(item -> !item.equals(left))
                 .collect(toList());
-        workspaceEdit.setResourceChanges(selectedResourceChanges);
+        workspaceEdit.setCheResourceChanges(selectedResourceChanges);
       } else {
         if (data == null && !node.isEnable()) {
           workspaceEdit.getChanges().remove(node.getUri());
